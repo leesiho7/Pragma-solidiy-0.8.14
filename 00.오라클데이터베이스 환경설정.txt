@@ -1,0 +1,21 @@
+오라클 데이터베이스 환경설정 프로세스
+1.오랔클 회원가입
+2.오라클 다운로드 및 설치
+3.학습용 계정- soctt,hr
+4.sql developer(dbms툴)설치
+5.학습용계정 불러오기
+
+[Run SQL Command Line]
+-show user;
+-->나의 계정의 상태를 확인하는 명령어
+-connect(conn)[계정이름]
+>해당계정에 접속하는 명령어
+->connect system / 12345 > system 계정에 접속 
+
+--alter user[해당계정]identified by [비밀번호]
+-->해당 계정의 비밀번호를 초기화 하는 명령어
+-->alter user hr identified by 12345 >> hr계정의 비밀번호 초기화  12345로 초기화
+
+-- alter user [해당계정 account unlock;
+-->해당 꼐정의 락을 풀어주는 명령어
+-->alter user hr account unlock ; > hr계정의 락을 풀어주는 명령어
