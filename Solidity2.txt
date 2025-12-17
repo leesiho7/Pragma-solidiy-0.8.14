@@ -1,0 +1,38 @@
+pragma solidity 0.8.15;
+
+contract ExampleAddress{            
+    address public someAddress;          //자바의 멤버 변수와 비슷합니다. "지갑주소"를 저장하는 주머니를 만듭니다.
+
+    function setsomeAddress(address _someAddress) public{      //Setter 외부에서 지갑주소를 입력받아 someAdress 주머니에 저장합니다
+        someAddress = _someAddress;
+    }
+    function getAddressBalance() public view returns(uint){    //지정된 주소의 잔액(balance)를 확인해서 알려줍니다.  uint는 부호없는 양수
+        return someAddress.balance;
+    }                                                                       //someAddress.balance :솔리디티가 제공하는 기본기능으로, 해당 주소의
+                                                                              잔고를 가져옵니다.
+}    
+---------------------------------------------------------------------
+
+pragma solidity 0.8.15;
+
+contract ExampleConstructor {              //자바의 생성자와 똑같습니다. 컨트랙트가 세상에 처음나올때 딱 한번 배포실행 됩니다.
+    address public myAddress;
+
+    constructor(address _someAddress){
+        myAddress = _someAddress;
+    }
+
+    function setMyAddress(address _myAddress) public{     //핵심코어
+        myAddress = _myAddress;
+    }
+    function setMyAddressToMsgSender()public {           //이 함수를 지금 누루고 있는 사람의 지갑주소
+        myAddress = msg.sender;                               //즉 이버튼을 누른 사람을 주인으로 등록하겠다는 논리를 짤 때 사용
+  }
+}                                                      //그러고보니 자바 Class 접근자제어 캡슐화해서 은행Account 시스템 Setter 한거랑 비슷한듯
+---------------------------------------------------------------------
+
+                              자바                                             솔리디티
+저장소        맴버변수 (Private String name)             상태변수(address public myAdress)
+초기화        public Account(){...}                             constructor(){...}
+값 변경       Setter (setBalance)                              함수(setMyAddress)
+누가 했나?   확인하기 어려움 (로그필요)                  msg.sender(누구인지 즉시 확인가능)

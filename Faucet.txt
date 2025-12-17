@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Faucet {
+    // uint(오타 수정), constant로 최대 인출량 제한
+    uint public constant MAX_WITHDRAW = 0.01 ether;
+
+    event Received(address sender, uint amount);   
+    event FallbackTriggered(address sender, uint amount);   //자바의 로그출력과 비슷,돈이 들어오면 누가 얼마나 보냈는지 블록체인에 기록
+                                                                             (log)에 남기겠다는 선언
+
+    // 돈을 주는 함수
+    function withdraw(uint withdraw_amount) public {
+        // 1. 금액 제한 확인                                                                    
+        require(withdraw_amount <= MAX_WITHDRAW, "Amount exceeds limit");   //이함수는 사용자가 돈을 달라고 요청할 때 실행됩니다.
+        // 2. 잔액 확인                                                                            //요청한 금액이 작거나 같은가?를 실행 조건을 만족하지 못하면
+        require(address(this).balance >= withdraw_amount, "Insufficient balance");     거래를 취소시킴
+                                                                                                       //돈이 충분히 있는가?를 확인합니다.
+        // 3. 실제로 돈을 보내는 코드 (추가됨)
+        payable(msg.sender).transfer(withdraw_amount);
+    }
+
+    // 잔액 확인 (View 함수)
+    function getBalance() public view returns (uint) {
+        return address(this).balance;
+    }
+
+    // 돈을 받을 때 실행
+    receive() external payable {                             //누군가 아무 데이터 없이 돈만 보냈을때 실행
+        emit Received(msg.sender, msg.value);
+    }
+
+    fallback() external payable {                                //누군가 잘못된 방법으로 접속하거나 , 돈을 보낼때 실행
+        emit FallbackTriggered(msg.sender, msg.value);
+    }
+}                               //require <--예외처리 거래조건이 안맞으면 거래를 즉시차단
+

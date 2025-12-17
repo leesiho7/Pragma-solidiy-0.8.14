@@ -1,0 +1,39 @@
+
+pragma solidity 0.8.15;
+ 
+contract ExampleStrings {
+ 
+    string public myString = "Hello World";
+ 
+    function setMyString(string memory _myString) public {     //Setter메서드 
+        myString = _myString;
+    }
+ 
+    function compareTwoStrings(string memory _myString) public view returns(bool) {
+        return keccak256(abi.encodePacked(myString)) == keccak256(abi.encodePacked(_myString));
+    }
+ 
+}  memory키워드: 솔리디티에서 문자열은 배열 형태의 복합타입이라, 함수 인자로 받을 때 이 값을 잠깐 메모리에 둘 것인지 (memory)에
+                       아니면 '영구히 저장 할 것인지(storage) 명시해야 합니다. 보통 입력값은 memory를 씁니다.
+  
+  compareTwoStrings(string memory _myString) 이부분은 자바와 가장 다른 솔리디티만의 특징이다.
+                                                               return(bool) 결과값으로 참(true) 또는 거짓 (false)을 반환합니다.
+
+   view: 블록체인의 데이터를 읽기만 하고 수정하지 않는다는 뜻
+
+핵심 로직: 왜 이렇게 복잡하게 비교하나요?
+솔리디티에는 자바의 str.equals(str2) 같은 문자열 비교 연산자가 직접적으로 없어서 이와 같은 과정을 거칩니다.
+keccak256(abi.encodePacked(myString))==keccak256(abi.encodePacked(_myString))
+1.abi.encodePacked(...):문자열 데이터를 컴퓨터가 읽기 좋은 압축된 바이트(Byte)형태로 변환합니다.
+2.keccak256(...) : 변환된 데이터를 **해시함수(Hash function)에 넣어 고유한 지문(Hash)값으로 만듭니다
+3.== 두 문자열의 '지문'이 같은지 비교합니다.
+
+                       자바                                  솔리디티
+
+비교방법        str1.equals(str2)                   해시 (Hash) 값  비교                                              
+
+데이터저장     힙(heap)메모리관리               Storage(영구)/Memory(임시)
+
+비용             무료(cpu자원만 사용)             유료(가스비 발생)
+
+ 
