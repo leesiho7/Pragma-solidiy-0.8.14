@@ -1,0 +1,38 @@
+//SPDX-License-Identifier: MIT
+ 
+pragma solidity 0.8.15;
+ 
+contract PaymentReceived {        
+    address public from;
+    uint public amount;
+ 
+    constructor(address _from, uint _amount) {
+        from = _from;
+        amount = _amount;
+    }
+}
+ 
+contract Wallet {
+    PaymentReceived public payment;
+ 
+    function payContract() public payable {     
+        payment = new PaymentReceived(msg.sender, msg.value);                  //patContrat()를 실행하면 new PaymentReceived(...)라는 명령어를 통해 독립된 새로운 컨트렉트가 
+                                                                              // 블록체인에 배포됩니다.
+    }                                                                         //장점: 결제테이터가 별도의 컨트렉트로 존재하므로 데이터 독립성이 강하다.
+}                                                                              //단점 :가스비가 매우 비싸다.. 매번 새 건물을 짓는 것과 같기 때문이다.
+
+contract Wallet2 {                                                  //구조체방식(Wallet2    
+    struct PaymentReceivedStruct {                              //이방식은 컨트랙트 내부의 데이터바구니(Struct)에 값만 업데이트 하는 방식입니다..     
+        address from;                                           //동작: PaymentReceivedStruct 라는 틀을 미리 정의해두고, pay Contract()가 실행될때마다 그 틀 안에 값
+        uint amount;                                            //(msg.sender, msg,value)만 갈아끼웁니다.
+    }                                                           //특징  
+                                                                //동작: PaymentReceivedStruct 라는 틀을 미리 정의해두고,PayContract()가 실행될 때마다 그 틀 안에값
+    PaymentReceivedStruct public payment;                       //(msg.sender,msg.value)만 갈아 끼웁니다.        
+                                                                //특징
+    function payContract() public payable {                     //장점 : 가스비가 훨씬 저렴합니다. 건물을 두고 내부 가구(데이터)만 바꾸는 것이기 떄문입니다.
+        payment = PaymentReceivedStruct(msg.sender, msg.value); //단점 : 기존 데이터 위에 덮어쓰기 때문에, 별도의 리스트(mapping 이나 array)를 만들지 않으면 이전 결제 기록이 사라집니다.
+    }                                                           //Wallet(컨트렉트 방식)                         Wallet(구조체 방식)
+}                                                      //저장위치  새로운 컨트렉트 주소                        기존 컨트렉트의 변수 공간    
+                                                       // 비유     매결제마다 새 영수증 종이를 꺼냄            칠판에 적힌 내용을 지우고 다시씀
+                                                       // 가스     매우 높음(배포 비용)                       낮음(상태 변수 변경 비용)
+                                                    //데이터관리    개별 주소로 데이터 접근 가능               구조체 변수 하나에만 최신값 저장
