@@ -16,7 +16,7 @@ contract Wallet {
     PaymentReceived public payment;
  
     function payContract() public payable {     
-        payment = new PaymentReceived(msg.sender, msg.value);                  //patContrat()를 실행하면 new PaymentReceived(...)라는 명령어를 통해 독립된 새로운 컨트렉트가 
+        payment = new PaymentReceived(msg.sender, msg.value);                  //payContrat()를 실행하면 new PaymentReceived(...)라는 명령어를 통해 독립된 새로운 컨트렉트가 
                                                                               // 블록체인에 배포됩니다.
     }                                                                         //장점: 결제테이터가 별도의 컨트렉트로 존재하므로 데이터 독립성이 강하다.
 }                                                                              //단점 :가스비가 매우 비싸다.. 매번 새 건물을 짓는 것과 같기 때문이다.
@@ -35,4 +35,5 @@ contract Wallet2 {                                                  //구조체�
 }                                                      //저장위치  새로운 컨트렉트 주소                        기존 컨트렉트의 변수 공간    
                                                        // 비유     매결제마다 새 영수증 종이를 꺼냄            칠판에 적힌 내용을 지우고 다시씀
                                                        // 가스     매우 높음(배포 비용)                       낮음(상태 변수 변경 비용)
+
                                                     //데이터관리    개별 주소로 데이터 접근 가능               구조체 변수 하나에만 최신값 저장
