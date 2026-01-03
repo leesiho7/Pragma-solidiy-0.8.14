@@ -4,16 +4,16 @@ pragma solidity ^0.8.27;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-                                                                                                               //CoffeeToken
+                                                                                                  //CoffeeToken
 contract CoffeeToken is ERC20, AccessControl {                                                    //표준   ERC-20 첨부
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");                     //openzepplien
-                                                                                                               //configure환경 paris로함 일부호환 안되는것들은 paris로 바꿧음
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");                               //openzepplien
+                                                                                                  //configure환경 paris로함 일부호환 안되는것들은 paris로 바꿧음
     event CoffeePurchased(address indexed receiver, address indexed buyer);                //파라미터 인자값 2개
-
-    constructor() ERC20("CoffeeToken", "CFE") {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(MINTER_ROLE, msg.sender);
-    }
+                                                                                           //-----고정 공급 토큰-----                      ------------가변 공급 토큰------------------------
+    constructor() ERC20("CoffeeToken", "CFE") {                                       //생성자로부터 단 한번만 호출할수 있다                가변 공급 토큰은 계약이 배포된 후에도 추가 토큰을 발행
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);                                   //즉 토큰이 배포된 후에는 내부 토큰발행기능에          할수 있도록 하는 기능을 구현합니다.
+        _grantRole(MINTER_ROLE, msg.sender);                                          //더이상 접근할 수 없으며 ,토큰공급량은 고정된
+    }                                                                                 //상태로 유지됩니다.
 
     function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
         _mint(to, amount);
@@ -31,4 +31,6 @@ contract CoffeeToken is ERC20, AccessControl {                                  
     }
 
 }
+//토큰 소각 OpenZeppelin의 ERC20 토큰 구현에는 내부 _burn함수가 있습니다. 다시 말해 internal, ERC20 컨트렉트를 기본 컨트렉트로 사용할 때는 다른 함수가 
+이 함수를 실제로 호출해야 합니다.
 
