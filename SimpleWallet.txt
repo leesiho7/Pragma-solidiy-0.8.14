@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+// OpenZeppelin 라이브러리 임포트 (보안 및 소유권 관리)
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
+
+// 1. Allowance 계약: 한도 제한 기능을 담당합니다.
+contract Allowance is Ownable {
+    // 한도 변경 시 발생하는 이벤트
+    event AllowanceChanged(address indexed _forWho, address indexed _fromWhom, uint _oldAmount, uint _newAmount);
+
+    // 각 주소별 허용된 한도를 저장하는 매핑
+    mapping(address => uint) public allowance;
+
+    // 생성자: Ownable을 상속받아 배포자를 소유자로 설정합니다.
+    constructor() Ownable(msg.sender) {}
+
+    // 한도를 설정하는 함수 (소유자만 가능)
+    function addAllowance(address _who, uint _amount) public onlyOwner {
+        emit AllowanceChanged(_who, msg.sender, allowance[_who], _amount);
+        allowance[_who] = _amount;
+    }
+
+    // 소유자가 아니면 한도를 차감하는 모디파이어
+    modifier ownerOrAllowed(uint _amount) {
+        require(owner() == msg.sender || allowance[msg.sender] >= _amount, "You are not allowed!");
+        _;
+    }
+
+    // 내부적으로 한도를 차감하는 함수
+    function reduceAllowance(address _who, uint _amount) internal {
+        emit AllowanceChanged(_who, msg.sender, allowance[_who], allowance[_who] - _amount);
+        allowance[_who] -= _amount;
+    }
+}
+
+// 2. SimpleWallet 계약: 실제 자금을 관리하며 Allowance를 상속받습니다.
+contract SimpleWallet is Allowance {
+    // 자금 수령 및 발송 시 발생하는 이벤트
+    event MoneySent(address indexed _beneficiary, uint _amount);
+    event MoneyReceived(address indexed _from, uint _amount);
+
+    // 돈을 인출하는 함수
+    function withdrawMoney(address payable _to, uint _amount) public ownerOrAllowed(_amount) {
+        require(_amount <= address(this).balance, "Contract has insufficient funds");
+        
+        // 소유자가 아니면 한도에서 차감
+        if (owner() != msg.sender) {
+            reduceAllowance(msg.sender, _amount);
+        }
+        
+        emit MoneySent(_to, _amount);
+        _to.transfer(_amount);
+    }
+
+    // 소유권 포기 기능을 비활성화 (지갑의 안전을 위해)
+    function renounceOwnership() public override onlyOwner {
+        revert("Can't renounce ownership here");
+    }
+
+    // 계약으로 이더가 전송될 때 실행되는 함수
+    receive() external payable {
+        emit MoneyReceived(msg.sender, msg.value);
+    }
+}
