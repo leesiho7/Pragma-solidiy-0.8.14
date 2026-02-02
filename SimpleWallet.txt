@@ -1,64 +1,126 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+// → Solidity 컴파일러 버전 0.8.0 이상 사용
+// (0.8부터는 overflow/underflow 자동 체크됨)
 
 // OpenZeppelin 라이브러리 임포트 (보안 및 소유권 관리)
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
+// → Ownable: owner 개념 + onlyOwner modifier 제공
+// → 직접 구현 안 해도 검증된 코드 사용 (보안 ↑)
 
-// 1. Allowance 계약: 한도 제한 기능을 담당합니다.
+// ==========================================================
+// 1. Allowance 계약
+// : "누가 얼마까지 쓸 수 있는지" 한도 관리 담당
+// ==========================================================
 contract Allowance is Ownable {
-    // 한도 변경 시 발생하는 이벤트
-    event AllowanceChanged(address indexed _forWho, address indexed _fromWhom, uint _oldAmount, uint _newAmount);
 
-    // 각 주소별 허용된 한도를 저장하는 매핑
+    // 한도 변경 시 블록체인 로그에 남길 이벤트
+    event AllowanceChanged(
+        address indexed _forWho,   // 한도를 받는 사람
+        address indexed _fromWhom, // 변경한 사람 (보통 owner)
+        uint _oldAmount,           // 이전 한도
+        uint _newAmount            // 변경된 한도
+    );
+
+    // 주소별 사용 가능한 금액(한도)을 저장
     mapping(address => uint) public allowance;
+    // → allowance[주소] = 허용된 wei 양
 
-    // 생성자: Ownable을 상속받아 배포자를 소유자로 설정합니다.
+    // 생성자
     constructor() Ownable(msg.sender) {}
+    // → 컨트랙트 배포자를 owner로 설정
+    // → Ownable의 생성자 호출
 
-    // 한도를 설정하는 함수 (소유자만 가능)
+    // 특정 주소의 한도를 설정하는 함수
+    // 소유자만 호출 가능
     function addAllowance(address _who, uint _amount) public onlyOwner {
-        emit AllowanceChanged(_who, msg.sender, allowance[_who], _amount);
+        // 한도 변경 이벤트 발생 (로그 기록)
+        emit AllowanceChanged(
+            _who,
+            msg.sender,
+            allowance[_who],
+            _amount
+        );
+
+        // 실제 한도 값 변경
         allowance[_who] = _amount;
     }
 
-    // 소유자가 아니면 한도를 차감하는 모디파이어
+    // owner이거나, 허용된 한도 내에서만 실행 가능하게 하는 modifier
     modifier ownerOrAllowed(uint _amount) {
-        require(owner() == msg.sender || allowance[msg.sender] >= _amount, "You are not allowed!");
+        require(
+            owner() == msg.sender || allowance[msg.sender] >= _amount,
+            "You are not allowed!"
+        );
+        // → owner면 무조건 통과
+        // → owner 아니면 allowance가 충분해야 통과
         _;
     }
 
-    // 내부적으로 한도를 차감하는 함수
+    // 내부 함수: 한도를 실제로 차감
     function reduceAllowance(address _who, uint _amount) internal {
-        emit AllowanceChanged(_who, msg.sender, allowance[_who], allowance[_who] - _amount);
+        emit AllowanceChanged(
+            _who,
+            msg.sender,
+            allowance[_who],
+            allowance[_who] - _amount
+        );
+
         allowance[_who] -= _amount;
+        // → Solidity 0.8이라 underflow 시 자동 revert
     }
 }
 
-// 2. SimpleWallet 계약: 실제 자금을 관리하며 Allowance를 상속받습니다.
+// ==========================================================
+// 2. SimpleWallet 계약
+// : 실제 이더를 보관하고 송금하는 지갑
+// ==========================================================
 contract SimpleWallet is Allowance {
-    // 자금 수령 및 발송 시 발생하는 이벤트
-    event MoneySent(address indexed _beneficiary, uint _amount);
-    event MoneyReceived(address indexed _from, uint _amount);
 
-    // 돈을 인출하는 함수
-    function withdrawMoney(address payable _to, uint _amount) public ownerOrAllowed(_amount) {
-        require(_amount <= address(this).balance, "Contract has insufficient funds");
-        
-        // 소유자가 아니면 한도에서 차감
+    // 돈을 보냈을 때 발생하는 이벤트
+    event MoneySent(
+        address indexed _beneficiary, // 받는 사람
+        uint _amount                  // 보낸 금액
+    );
+
+    // 돈을 받았을 때 발생하는 이벤트
+    event MoneyReceived(
+        address indexed _from, // 보낸 사람
+        uint _amount            // 받은 금액
+    );
+
+    // 지갑에서 이더를 인출하는 함수
+    function withdrawMoney(
+        address payable _to,
+        uint _amount
+    )
+        public
+        ownerOrAllowed(_amount) // owner 또는 allowance 내에서만 가능
+    {
+        // 컨트랙트 잔액 체크
+        require(
+            _amount <= address(this).balance,
+            "Contract has insufficient funds"
+        );
+
+        // owner가 아닌 경우 → 한도 차감
         if (owner() != msg.sender) {
             reduceAllowance(msg.sender, _amount);
         }
-        
+
+        // 송금 이벤트 기록
         emit MoneySent(_to, _amount);
+
+        // 실제 이더 전송
         _to.transfer(_amount);
     }
 
-    // 소유권 포기 기능을 비활성화 (지갑의 안전을 위해)
+    // 소유권 포기 함수 비활성화
     function renounceOwnership() public override onlyOwner {
         revert("Can't renounce ownership here");
     }
+    // → 실수로 owner = address(0) 되는 사고 방지
 
-    // 계약으로 이더가 전송될 때 실행되는 함수
+    // 컨트랙트가 이더를 받을 때 자동 실행
     receive() external payable {
         emit MoneyReceived(msg.sender, msg.value);
     }
